@@ -119,7 +119,7 @@ import qualified Data.Map as Map
 import System.Directory
          ( doesFileExist, getAppUserDataDirectory, createDirectoryIfMissing
          , canonicalizePath, removeFile, renameFile, getDirectoryContents, getCurrentDirectory )
-import System.FilePath          ( (</>), (<.>), takeExtension
+import System.FilePath          ( (</>), (<.>), (-<.>), takeExtension
                                 , takeDirectory, replaceExtension
                                 , isRelative, normalise )
 import qualified System.Info
