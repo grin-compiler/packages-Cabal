@@ -685,7 +685,7 @@ renderGhcOptions comp _platform@(Platform _arch os) opts
   , concat [ [ "-optP-include", "-optP" ++ inc]
            | inc <- flags ghcOptCppIncludes ]
   , [ "-optc" ++ opt | opt <- ghcOptCcOptions opts]
-  , [ "-optc" ++ opt | opt <- ghcOptCxxOptions opts]
+  , [ "-optcxx" ++ opt | opt <- ghcOptCxxOptions opts]
   , [ "-opta" ++ opt | opt <- ghcOptAsmOptions opts]
 
   -----------------
