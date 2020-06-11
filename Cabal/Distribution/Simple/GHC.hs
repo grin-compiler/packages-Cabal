@@ -2052,6 +2052,14 @@ installLib verbosity lbi targetDir dynlibTargetDir _builtDir pkg lib clbi = do
 
   catch copyStgBins handleCopyEx
 
+  let copyHIEs = do
+        -- copy .hie files over:
+        whenVanilla $ copyModuleFiles "hie"
+        whenProf    $ copyModuleFiles "hie" -- FIXME: is the extension correct?
+        whenShared  $ copyModuleFiles "hie" -- FIXME: is the extension correct?
+
+  catch copyHIEs handleCopyEx
+
   let myInstall srcDir dstDir name = do
         let src = srcDir </> name
             dst = dstDir </> name
