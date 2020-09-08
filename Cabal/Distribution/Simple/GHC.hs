@@ -528,7 +528,7 @@ getInstalledPackagesMonitorFiles verbosity platform progdb =
   -}
 
 writeStgLib :: BuildInfo -> ComponentLocalBuildInfo -> [FilePath] -> [FilePath] -> [FilePath] -> [String] -> FilePath -> IO ()
-writeStgLib libBi clbi cObjs cLikeFiles hStgbins modules stgbinArName = do
+writeStgLib libBi clbi cObjs cLikeFiles modPaks modules stgbinArName = do
   root <- getCurrentDirectory
 
   let ppSection l = unlines ["- " ++ x | x <- nubOrd $ map show l]
@@ -553,7 +553,7 @@ writeStgLib libBi clbi cObjs cLikeFiles hStgbins modules stgbinArName = do
         -- HS dependencies
         , "componentPackageDeps:", ppSection [unUnitId uid | (uid, _) <- componentPackageDeps clbi]
         -- HS object origins
-        , "hStgbins:"    , ppSection hStgbins
+        , "modPaks:"     , ppSection modPaks
         -- HS modules
         , "modules:"     , ppSection modules
         ]
@@ -1001,11 +1001,11 @@ buildOrReplLib mReplFlags verbosity numJobs pkg_descr lbi lib clbi = do
       info verbosity (show (ghcOptPackages ghcSharedLinkArgs))
 
       whenVanillaLib False $ do
-        -- stglib: stgbin archive
-        stgFiles <- Internal.getHaskellObjects implInfo lib lbi clbi libTargetDir (objExtension ++ "_stgbin") True
+        -- mod_pak: mod_pak archive
+        modpakFiles <- Internal.getHaskellObjects implInfo lib lbi clbi libTargetDir ("mod_pak") True
         let cLikeObjs = map (libTargetDir </>) cObjs
             modules = map prettyShow $ explicitLibModules lib
-        writeStgLib libBi clbi cLikeObjs cLikeFiles stgFiles modules (vanillaLibFilePath -<.> ".stglib")
+        writeStgLib libBi clbi cLikeObjs cLikeFiles modpakFiles modules (vanillaLibFilePath -<.> ".stglib")
         -- cbits archive
         unless (null cObjs) $ do
           Ar.createArLibArchive verbosity lbi (vanillaLibFilePath -<.> ".cbits.a") cLikeObjs
@@ -1611,10 +1611,9 @@ gbuild verbosity numJobs pkg_descr lbi bm clbi = do
             | needProfiling = "p_o"
             | needDynamic   = "dyn_o"
             | otherwise     = "o"
-          stgExtension  = objExtension ++ "_stgbin"
-          stgFiles      = [normalise (tmpDir </> s -<.> stgExtension) | s <- inputFiles ++ map ModuleName.toFilePath inputModules]
+          modpakFiles   = [normalise (tmpDir </> s -<.> ".mod_pak") | s <- inputFiles ++ map ModuleName.toFilePath inputModules]
           modules       = map prettyShow inputModules
-      writeStgLib (gbuildInfo bm) clbi cLikeObjs cLikeFiles stgFiles modules (target -<.> ".stgapp")
+      writeStgLib (gbuildInfo bm) clbi cLikeObjs cLikeFiles modpakFiles modules (target -<.> ".stgapp")
       -------------------
 
     GBuildFLib flib -> do
@@ -2041,24 +2040,14 @@ installLib verbosity lbi targetDir dynlibTargetDir _builtDir pkg lib clbi = do
   whenProf    $ copyModuleFiles "p_hi"
   whenShared  $ copyModuleFiles "dyn_hi"
 
-  let copyStgBins = do
-        -- copy .stgbin files over:
-        whenVanilla $ copyModuleFiles "o_stgbin"
-        whenProf    $ copyModuleFiles "p_o_stgbin"
-        whenShared  $ copyModuleFiles "dyn_o_stgbin"
+  let copyModPaks = do
+        -- copy .mod_pak files over:
+        copyModuleFiles "mod_pak"
 
       handleCopyEx :: SomeException -> IO ()
       handleCopyEx _ = pure ()
 
-  catch copyStgBins handleCopyEx
-
-  let copyHIEs = do
-        -- copy .hie files over:
-        whenVanilla $ copyModuleFiles "hie"
-        whenProf    $ copyModuleFiles "hie" -- FIXME: is the extension correct?
-        whenShared  $ copyModuleFiles "hie" -- FIXME: is the extension correct?
-
-  catch copyHIEs handleCopyEx
+  catch copyModPaks handleCopyEx
 
   let myInstall srcDir dstDir name = do
         let src = srcDir </> name
